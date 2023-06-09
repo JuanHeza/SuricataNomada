@@ -1,0 +1,31 @@
+{
+"message":"Request failed with status code 400",
+"name":"AxiosError",
+"stack":"AxiosError: Request failed with status code 400\n    at settle (/home/runner/SuricataNomada/node_modules/axios/dist/node/axios.cjs:1909:12)\n    at BrotliDecompress.handleStreamEnd (/home/runner/SuricataNomada/node_modules/axios/dist/node/axios.cjs:2989:11)\n    at BrotliDecompress.emit (node:events:525:35)\n    at BrotliDecompress.emit (node:domain:489:12)\n    at endReadableNT (node:internal/streams/readable:1359:12)",
+"config":{
+"transitional":{
+"silentJSONParsing":true,
+"forcedJSONParsing":true,
+"clarifyTimeoutError":false
+},
+"adapter":["xhr","http"],
+"transformRequest":[null],
+"transformResponse":[null],
+"timeout":0,
+"xsrfCookieName":"XSRF-TOKEN",
+"xsrfHeaderName":"X-XSRF-TOKEN"
+,"maxContentLength":-1,
+"maxBodyLength":-1,
+"env":{},
+"headers":{
+"Accept":"application/json, text/plain, */*",
+"Content-Type":"application/json",
+"Authorization":"EAATM4X0ag2ABAOoy0i465XZC7zwxa0odIsxvlu7UolEUs3OTiEON63Vwn1TiMgdIvUkpG7HMmymMetZAq0mdUUTy7CANjFJpjfFYHZAty2OoRublYEIf49WCQFhNpKbbzfkx6BEah7ny0oviuwOwKcvlKvXZAXQA0twzhds3ZCcijl6o2ZAduS31h9I6QmQyFTb9C9fyvZChT3pYGnmW366",
+"User-Agent":"axios/1.4.0",
+"Content-Length":"171",
+"Accept-Encoding":"gzip, compress, deflate, br"
+},
+"method":"post",
+"url":"https://graph.facebook.com/v17.0/107789139008681/messages",
+"data":"{
+\"messaging_product\":\"whatsapp\",\"to\":\"528666303285\",\"type\":\"location\",\"location\":{\"longitude\":\"25.6854215\",\"latitude\":\"-100.3443915\",\"name\":\"Local\",\"address\":\"Ubicacion\"}}"},"code":"ERR_BAD_REQUEST","status":400}
