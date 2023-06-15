@@ -102,6 +102,7 @@ module.exports = {
         }
 
         buildList(to = null, text = {}, list = this.listTemplate) {
+            console.log(list)
             return to == null ? null : {
                 ...this.getHeaderMessage(),
                 data: {
@@ -131,8 +132,8 @@ module.exports = {
                                         return [...subacc,
                                         {
                                             id: subcurr.id,
-                                            title: subcurr.titulo,
-                                            description: subcurr.description
+                                            title: subcurr.titulo.slice(0,24),
+                                            description: subcurr.description.slice(0,72)
                                         }
                                         ]
                                     }, [])

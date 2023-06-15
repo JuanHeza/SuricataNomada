@@ -3,7 +3,7 @@
 // https://scontent.fntr10-1.fna.fbcdn.net/v/t39.30808-6/237116516_1202936183522945_4130982476622055245_n.png?_nc_cat=100&ccb=1-7&_nc_sid=730e14&_nc_ohc=ihRASURPFs0AX-Jnj9r&_nc_ht=scontent.fntr10-1.fna&oh=00_AfAcck2IlDgejQFZNmE04LZAfX4fx1MIrXskqWnxFeqzNw&oe=648C39BC
 
 // https://kanare-abstract.com/en
-
+🇪🇸
 
 '-Tipo de Cambio \n' +
       'via web service\n' +
