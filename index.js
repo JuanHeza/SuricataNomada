@@ -3,7 +3,8 @@ const express = require('express'), axios = require("axios"), bodyParser = requi
 const botTools = require('./bot'), divisas = require("./divisas.js");
 var botRequest = new botTools.botRequest(process.env.token, process.env.id);
 var divisa = new divisas.handler();
-var [converterFactor, flag] = [null, null]
+var [converterFactor, flag, listaDivisas] = [null, null, null]
+var [ignore, lat, long, title] = ["", "", "", ""]
 
 const app = express();
 app.use(bodyParser.urlencoded({ extended: false }));
@@ -14,9 +15,6 @@ app.get('/', (req, res) => {
 /*
     Existencia de divisas en sucursales
         le informo que solamente se separan por 1 hora a partir de la llamada puede acudir en ese lapso?  que  divisa ocupa, cantidad y sucursal si es tan amable
-        
-    Horario de sucursales
-        En un momento te paso un xls
 */
 
 app.post("/webhook", (req, res) => {
@@ -24,7 +22,6 @@ app.post("/webhook", (req, res) => {
     if (req.body?.object) {
         if (req.body?.entry?.[0]?.changes?.[0]?.value.messages?.[0]) {
             let root = req.body.entry[0].changes[0].value
-            //console.log(root.messages[0])
             let from = root.messages[0].from;
             from = from.slice(0, 3) == "521" ? from.replace("521", "52") : from
             let params = async (message, from) => {
@@ -36,35 +33,18 @@ app.post("/webhook", (req, res) => {
                     case "text":
                         console.log("TEXTO")
                         return textHandler(message, from)
-                    case "sticker":
-                        console.log("STICKER")
-                        return unknownHandler(from)
-                    case "image":
-                        console.log("IMAGEN")
-                        return unknownHandler(from)
-                    case "video":
-                        console.log("VIDEO")
-                        return unknownHandler(from)
                     case "location":
                         console.log("UBICACION")
                         return await locationHandler(message, from)
-                    case "audio":
-                        console.log("AUDIO")
-                        return unknownHandler(from)
-                    case "document":
-                        console.log("DOCUMENTO")
-                        return unknownHandler(from)
-                    case "contacts":
-                        console.log("CONTACTO")
-                        return unknownHandler(from)
                     default:
+                        console.log(message.type)
                         console.log(root)
                         return unknownHandler(from)
                 }
             }
-
+            //if (from == "528666303285"){/////////////////
             params(root.messages[0], from).then((data) => {
-                console.log(JSON.stringify(data))
+                console.log(new Date())
                 axios.request(data).then(function(response) {
                     console.log("++++++++++++++++++++++++++++++++++++++++++++++++++++++++\n")
                     axios.request(botRequest.setRead(root.messages[0].id)).catch(function(unreaded) {
@@ -73,9 +53,12 @@ app.post("/webhook", (req, res) => {
                     res.sendStatus(200);
                 }).catch(function(error) {
                     console.log("--------------------------------------------------------\n", error.response.data.error)
+                    //console.log(JSON.stringify(data))
+                    axios.request(unknownHandler(from))
                     res.sendStatus(404);
                 });
             })
+            //}//////////////////////
 
         }
     } else {
@@ -84,26 +67,17 @@ app.post("/webhook", (req, res) => {
 });
 
 app.get("/webhook", (req, res) => {
-    /*
-     * UPDATE YOUR VERIFY TOKEN
-     *This will be the Verify Token value when you set up webhook
-    */
     const verify_token = process.env.verify_token;
 
-    // Parse params from the webhook verification request
     let mode = req.query["hub.mode"];
     let token = req.query["hub.verify_token"];
     let challenge = req.query["hub.challenge"];
 
-    // Check if a token and mode were sent
     if (mode && token) {
-        // Check the mode and token sent are correct
         if (mode === "subscribe" && token === verify_token) {
-            // Respond with 200 OK and challenge token from the request
             console.log("WEBHOOK_VERIFIED");
             res.status(200).send(challenge);
         } else {
-            // Responds with '403 Forbidden' if verify tokens do not match
             res.sendStatus(403);
         }
     }
@@ -114,78 +88,48 @@ app.listen(3000, () => {
 });
 
 async function interactiveHandler(message, from) {
-    let [ignore, lat, long, title] = ["", "", "", ""]
     switch (message.interactive.type) {
         case "list_reply":
-            console.log(message.interactive)
             switch (message.interactive.list_reply.id.split(" ")[0]) {
-                case "ubicacion":
-                    return botRequest.buildLocation(from)
-                case "media":
-                    return botRequest.buildMedia(from, "image", { link: "https://placekitten.com/g/450/40" })
                 case "sucursal":
                     [ignore, lat, long] = message.interactive.list_reply.id.split(" ")
-                    return await divisa.getDivisas(lat, long).then((data) => {
-                        return botRequest.buildButtons(from, data.divisaCapturaDTOList.reduce((acc, curr) => {
-                            return `${acc}\n\n${curr.moneda} ${curr.divisa}\n*COPMRA:*  _$ ${curr.compra}_\n*VENTA:*  _$ ${curr.venta}_`
-                        }, data.zona), [{ id: `localizar ${data.latitudUbicacion} ${data.longitudUbicacion} ${data.zona.replaceAll(" ", "_")}`, text: `Localizar Sucursal` }, { id: `divisas ${data.latitudUbicacion} ${data.longitudUbicacion}`, text: `Cambiar Divisas` }])
-                    })
+                    return sucursalHandler(from, lat, long)
                 case "sucursalesPagina":
                     let index = message.interactive.list_reply.id.split(" ")[1]
                     return listHandler(message, from, index)
                 case "convertir":
                     [ignore, converterFactor, flag] = message.interactive.list_reply.id.split(" ")
-                    return botRequest.buildText(from, "Ingrese la cantidad que desea convertir\n" + (message.interactive.list_reply.title.includes("Comprar") ? `${divisa.getBandera(flag)} a ${divisa.getBandera("Pesos")}` : `${divisa.getBandera("Pesos")} a ${divisa.getBandera(flag)}`))
+                    return convertirHandler(message, from, flag)
                 case "faq":
                     [ignore, faq] = message.interactive.list_reply.id.split(" ")
-                    return botRequest.buildText(from, divisa.getFaqs(faq).respuesta)
+                    //return botRequest.buildText(from, divisa.getFaqs(faq).respuesta)
+                    return faqsHandler(from, divisa.getFaqs(faq).respuesta)
+                case "divisas":
+                    [ignore, lat, long, offset] = message.interactive.list_reply.id.split(" ")
+                    return divisasHandler(from, lat, long, Number(offset))
                 default:
                     return unknownHandler(from)
             }
         case "button_reply":
             switch (message.interactive.button_reply.id.split(" ")[0]) {
-                case "tipoCambio":
-                    return botRequest.buildText(from, "El tipo de cambio en las siguientes casas es de 0")
                 case "solicita":
-                    return botRequest.buildText(from, "Por favor envie su ubicacion actual")
+                    return botRequest.buildText(from, divisa.getTexto("textoEnviarLocalizacion"))
                 case "ubicaciones":
                     return listHandler(message, from)
                 case "faq":
-                    let buttons = divisa.getFaqs().reduce((acc, curr, ind) => {
-                        return [
-                            ...acc,
-                            {
-                                id: `faq ${ind}`,
-                                titulo: curr.pregunta,
-                                description: curr.pregunta
-                            }
-                        ]
-                    }, [])
-                    return botRequest.buildList(from, { body: "Acontinuacion te presentamos una lista con nuestras preguntas frecuentes" }, [{ titulo: "Opciones", botones: buttons }])
+                    return faqsHandler(from)
                 case "localizar":
                     [ingore, lat, long] = message.interactive.button_reply.id.split(" ")
-                    return botRequest.buildLocation(from, { latitude: lat, longitude: long, name: title.replaceAll("_", " "), address: title.replaceAll("_", " ") })
+                    return localizarHandler(from, lat, long)
                 case "divisas":
-                    let [ignore, lat, long] = message.interactive.button_reply.id.split(" ")
-                    return await divisa.getDivisas(lat, long).then((data) => {
-                        let buttons = data.divisaCapturaDTOList.reduce((acc, curr) => {
-                            console.log(curr)
-                            return curr.divisa == "Pesos" ? acc : [
-                                ...acc,
-                                {
-                                    id: `convertir ${1 / curr.venta} ${curr.divisa}`,
-                                    titulo: `${divisa.getBandera(curr.divisa)} Venta a $ ${curr.venta}`,
-                                    description: `Convertir Pesos a ${curr.divisa}`
-                                }, {
-                                    id: `convertir ${curr.compra} ${curr.divisa}`,
-                                    titulo: `${divisa.getBandera(curr.divisa)} Comprar a $ ${curr.compra}`,
-                                    description: `Convertir ${curr.divisa} a Pesos`
-                                }
-                            ]
-                        }, [])
-                        console.log(buttons)
-                        return botRequest.buildList(from, { body: "seleccione su tipo de Cambio" }, [{ titulo: "Opciones", botones: buttons }])
-                    })
+                    [ignore, lat, long] = message.interactive.button_reply.id.split(" ")
+                    return divisasHandler(from, lat, long)
+                case "inicio":
+                    return botRequest.buildButtons(from, divisa.getTexto("textoBienvenida"), [
+                        { id: "solicita", text: divisa.getTexto("botonSolicita") },
+                        { id: "ubicaciones", text: divisa.getTexto("botonUbicaciones") },
+                        { id: "faq", text: divisa.getTexto("botonFaq") }
+                    ])
                 default:
                     return unknownHandler(from)
             }
@@ -194,37 +138,43 @@ async function interactiveHandler(message, from) {
     }
 }
 
+/*------------------------------*/
+/*---------- HANDLERS ----------*/
+/*------------------------------*/
+
 function textHandler(message, from) {
     let msg_body = message.text.body.toLowerCase(); // extract the message text from the webhook payload
     let msg_id = message.id
     if (converterFactor) {
         let cantidad = msg_body.match(/[0-9]+([,.][0-9]+)?/)
         if (cantidad) {
-            return botRequest.buildText(from, `La cantidad convertida equivale a _$ ${(+cantidad[0].replace(",", ".") * converterFactor).toFixed(2)}_\n\n_Si desea hacer mas conversiones seleccione en la lista_`)
+            if (listaDivisas != null) {
+                [texto, converterFactor] = [`${divisa.getTexto("textoConvertido")} *_$ ${(+cantidad[0].replace(",", ".") * converterFactor).toFixed(2)}_*\n\n${divisa.getTexto("textoMasConversiones")}`, null]
+                return botRequest.buildList(from, {
+                    body: texto,
+                    boton: divisa.getTexto("listaTipoCambio")
+                }, [{ titulo: "Opciones", botones: listaDivisas }])
+            }
+            //return botRequest.buildText(from,`${divisa.getTexto("textoConvertido")} _$ ${(+cantidad[0].replace(",", ".") * converterFactor).toFixed(2)}_\n\n${divisa.getTexto("textoMasConversiones")}` )
         }
-        converterFactor = null
     }
-   // switch (msg_body) {
-     //   case "hola":
-            return botRequest.buildButtons(from, "Hola, soy el bot de asistencia de Divisas San Jorge, te ayudare a enconrar la sucursal mas cerna a ti, convertir divisasy conocer nuestros diferentes ubicaciones\nPor favor selecciona alguna de las siguentes opciones", [
-                { id: "solicita", text: "Ubicaciones cercanas" },
-                { id: "ubicaciones", text: "Ubicaciones" },
-                { id: "faq", text: "Preguntas Frequentes" }
-            ])
-       // default:
-         //   return unknownHandler(from)
-    //}
+    return botRequest.buildButtons(from, divisa.getTexto("textoBienvenida"), [
+        { id: "solicita", text: divisa.getTexto("botonSolicita") },
+        { id: "ubicaciones", text: divisa.getTexto("botonUbicaciones") },
+        { id: "faq", text: divisa.getTexto("botonFaq") }
+    ])
 }
 
 function unknownHandler(from) {
-    return botRequest.buildText(from, "El mensaje no puede ser procesado")
+    return botRequest.buildButtons(from, divisa.getTexto("Error"), [
+        { id: "inicio", text: divisa.getTexto("textoInicio") }
+    ])
 }
 
 async function locationHandler(message, from) {
     console.log(message.location)
     return await divisa.getUbicaciones(message.location.latitude, message.location.longitude).then(function(data) {
-        //console.log( data)
-        return botRequest.buildList(from, { body: "Ubicaciones Cercanas" }, [{
+        return botRequest.buildList(from, { body: divisa.getTexto("textoUbicacionesCercanas"), boton: divisa.getTexto("listaUbicacionesCercanas") }, [{
             titulo: "Sucursales",
             botones: data.slice(0, 10).reduce((acc, curr) => {
                 return [
@@ -257,11 +207,123 @@ async function listHandler(message, from, index = 0) {
         if (len != 0) {
             list.botones.push({
                 id: `sucursalesPagina ${index}`,
-                titulo: `Siguiente Pagina`,
+                titulo: divisa.getTexto("botonPaginacion"),
                 description: `${(index * 9) + 1} - ${(len + (index * 9))}`
             })
         }
         console.log(list)
-        return botRequest.buildList(from, { body: list.botones.slice(0, 9).reduce((acc, curr) => { return `${acc}\n\n*${curr.titulo}*` }, "Sucursales en esta lista:") }, [list])
+        return botRequest.buildList(from, { body: list.botones.slice(0, 9).reduce((acc, curr) => { return `${acc}\n\n*${curr.titulo}*` }, divisa.getTexto("textoListaSucursales")), boton: divisa.getTexto("listaSucursales") }, [list])
     })
 }
+
+function faqsHandler(from, texto = divisa.getTexto("textoFaqs")) {
+    let buttons = divisa.getFaqs().reduce((acc, curr, ind) => {
+        return [
+            ...acc,
+            {
+                id: `faq ${ind}`,
+                titulo: curr.pregunta,
+                description: curr.pregunta
+            }
+        ]
+    }, [])
+    return botRequest.buildList(from, {
+        body: texto,
+        boton: divisa.getTexto("listaFaqs")
+    }, [{ titulo: "Opciones", botones: buttons }])
+}
+
+function localizarHandler(from, lat, long) {
+    return botRequest.buildLocation(from, {
+        latitude: lat,
+        longitude: long,
+        name: title.replaceAll("_", " "),
+        address: title.replaceAll("_", " ")
+    })
+}
+
+async function divisasHandler(from, lat, long, offset = 0) {
+    return await divisa.getDivisas(lat, long).then((data) => {
+        let buttons = data.divisaCapturaDTOList.slice(offset, offset+4).reduce((acc, curr) => {
+            return curr.divisa == "Pesos" ? acc : {lista: [
+                ...acc.lista,
+                {
+                    id: `convertir ${1 / curr.venta} ${curr.divisa}`,
+                    titulo: `${divisa.getBandera(curr.divisa)} Venta a $ ${curr.venta}`,
+                    description: `Convertir Pesos a ${curr.divisa}`
+                }, {
+                    id: `convertir ${curr.compra} ${curr.divisa}`,
+                    titulo: `${divisa.getBandera(curr.divisa)} Comprar a $ ${curr.compra}`,
+                    description: `Convertir ${curr.divisa} a Pesos`
+                }
+            ], texto: `${acc.texto} ${divisa.getBandera(curr.divisa)}`}
+        }, {
+            lista: [], 
+            texto:  divisa.getTexto("textoDivisasListadas")
+        })
+        
+        let offsetList = data.divisaCapturaDTOList.slice(offset+4, offset+8)
+        if(offsetList.length > 0){
+            buttons.lista.push({
+                id: `divisas ${lat} ${long} ${offset+4}`,
+                titulo: divisa.getTexto("botonPaginacion"),
+                description: offsetList.reduce((acc, curr)=>{return curr.divisa == "Pesos" ? acc : `${acc} ${divisa.getBandera(curr.divisa)}`}, divisa.getTexto("textoDivisasListadas") )
+            })
+        }
+        listaDivisas = buttons
+        console.log(data.zona)
+        return botRequest.buildList(from, {
+           header: data.zona,
+            body: divisa.getTexto("textoTipoCambio"),
+            footer: buttons.texto,
+            boton: divisa.getTexto("listaTipoCambio")
+        }, [{ titulo: "Opciones", botones: buttons.lista }])
+    })
+}
+
+function convertirHandler(message, from, flag) {
+    return botRequest.buildText(from, divisa.getTexto("textoConvertirDivisa") + (message.interactive.list_reply.title.includes("Comprar") ? `${divisa.getBandera(flag)} a ${divisa.getBandera("Pesos")}` : `${divisa.getBandera("Pesos")} a ${divisa.getBandera(flag)}`))
+}
+
+async function sucursalHandler(from, lat, long) {
+    return await divisa.getDivisas(lat, long).then((data) => {
+        return botRequest.buildButtons(from, data.divisaCapturaDTOList.reduce((acc, curr) => {
+            return curr.divisa == "Pesos" ? acc : `${acc}\n\n${curr.moneda} ${curr.divisa}\n*COPMRA:*  _$ ${curr.compra}_\n*VENTA:*  _$ ${curr.venta}_`
+        }, `${data.zona}\n\n${parseHtml(data.descripcion)}`), [
+            {
+                id: `localizar ${data.latitudUbicacion} ${data.longitudUbicacion} ${data.zona.replaceAll(" ", "_")}`,
+                text:  divisa.getTexto("textoLocalizar")
+            }, {
+                id: `divisas ${data.latitudUbicacion} ${data.longitudUbicacion}`,
+                text:  divisa.getTexto("textoDivisas")
+            }
+        ]);
+    });
+}
+
+/*-------------------------------*/
+/*---------- FUNCTIONS ----------*/
+/*-------------------------------*/
+
+function parseHtml(text = "") {
+    text = text.replaceAll("<br>", "\n").replaceAll(/<\/[b|strong]*>/gi, "* ").replaceAll(/<[b|strong]*>/gi, "*")
+    return text
+}
+
+function parseHorario(text = "") {
+    return text.slice(text.lastIndexOf("*Horarios:*"))
+}
+
+/*
+https://www.storyblocks.com/images/stock/material-design-ui-ux-and-gui-kit-for-online-food-order-mobile-apps-with-login-menu-select-food-pizza-food-pizza-type-detail-confirmation-delivery-details-payment-option-and-order-placed-screens-sy9c9a866xj1gusvdd
+
+https://www.dreamstime.com/stock-illustration-material-design-ui-ux-gui-screens-health-medical-mobile-apps-doctor-details-booking-select-date-time-edit-profile-image84273695
+
+https://developers.facebook.com/docs/messenger-platform/overview
+
+https://wit.ai/docs/tutorials
+
+https://drive.google.com/file/d/1G41WfgpMsSYotJhRCKe0ljrMaUlbxsNc/edit?pli=1
+
+
+*/

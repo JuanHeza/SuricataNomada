@@ -3,7 +3,6 @@ module.exports = {
         constructor(token, id) {
             this.token = token
             this.id = id
-            this.to = process.env.juan
             this.headers = {
                 Authorization: `Bearer ${this.token}`,
                 "Content-Type": "application/json"
@@ -50,15 +49,15 @@ module.exports = {
 
         buildButtons(to = null, body = "", buttons = this.buttonsTemplate, actionHeader = null, actionFooter = null) {
             let setHeader = (h) => {
-                switch(h.type){
+                switch (h.type) {
                     case "text":
-                        return {text: header.value}
+                        return { text: header.value }
                     case "image":
-                        return {image: header.value}
+                        return { image: header.value }
                     case "document":
-                        return {document: header.value}
+                        return { document: header.value }
                     case "video":
-                        return {video: header.value}
+                        return { video: header.value }
                     default:
                         return {}
                 }
@@ -123,17 +122,17 @@ module.exports = {
                             text: text.footer
                         },
                         action: {
-                            button: text.button || "Boton",
+                            button: text.boton.slice(0, 20) || "Boton",
                             sections: list.reduce((acc, curr) => {
                                 return [...acc,
                                 {
-                                    title: curr.titulo.slice(0,24),
+                                    title: curr.titulo.slice(0, 24),
                                     rows: curr.botones.reduce((subacc, subcurr) => {
                                         return [...subacc,
                                         {
                                             id: subcurr.id,
-                                            title: subcurr.titulo.slice(0,24),
-                                            description: subcurr.description.slice(0,72)
+                                            title: subcurr.titulo.slice(0, 24),
+                                            description: subcurr.description.slice(0, 72)
                                         }
                                         ]
                                     }, [])
@@ -201,7 +200,7 @@ module.exports = {
         }
 
         /* CREO QUE NO FUNCIONA */
-        setRead(id = null){
+        setRead(id = null) {
             return id == null ? {} : {
                 ...this.getHeaderMessage(),
                 data: {
@@ -211,6 +210,6 @@ module.exports = {
                 }
             }
         }
-        
+
     }
 }
