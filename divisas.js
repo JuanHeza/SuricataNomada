@@ -125,6 +125,7 @@ module.exports = {
                 return null
             })
         }
+        
         async getInfo() {
             let params = {
                 method: 'POST',
@@ -142,6 +143,7 @@ module.exports = {
                 }
             })
         }
+        
         getBandera(buscar) {
             let banderas = {
                 USD: "🇺🇸",
@@ -159,11 +161,12 @@ module.exports = {
             }
             return banderas[buscar] || ""
         }
+        
         getFaqs(faq = -1) {
             return faq == -1 ? this._faqs : this._faqs[faq]
         }
+        
         getTexto(texto) {
-            console.log("Search: ", texto)
             return this._textos[texto] || this._textos.Error            
         }
     }
