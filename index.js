@@ -99,14 +99,17 @@ async function interactiveHandler(message, from) {
                     return listHandler(message, from, index)
                 case "convertir":
                     [ignore, converterFactor, flag] = message.interactive.list_reply.id.split(" ")
-                    return convertirHandler(message, from, flag)
+                    return convertirHandler(message.interactive.list_reply.title, from, flag)
                 case "faq":
                     [ignore, faq] = message.interactive.list_reply.id.split(" ")
                     //return botRequest.buildText(from, divisa.getFaqs(faq).respuesta)
                     return faqsHandler(from, divisa.getFaqs(faq).respuesta)
                 case "divisas":
                     [ignore, lat, long, offset] = message.interactive.list_reply.id.split(" ")
-                    return divisasHandler(from, lat, long, Number(offset))
+                    return divisaListHandler(from, lat, long, Number(offset))
+                case "divisaAcciones": 
+                    [ignore, moneda, venta, compra] = message.interactive.list_reply.id.split(" ")
+                    return divisaHandler(from, moneda, venta, compra)
                 default:
                     return unknownHandler(from)
             }
@@ -123,7 +126,12 @@ async function interactiveHandler(message, from) {
                     return localizarHandler(from, lat, long)
                 case "divisas":
                     [ignore, lat, long] = message.interactive.button_reply.id.split(" ")
-                    return divisasHandler(from, lat, long)
+                    return divisaListHandler(from, lat, long)
+                    //return divisasHandler(from, lat, long)
+                case "convertir":
+                    [ignore, converterFactor, flag] = message.interactive.button_reply.id.split(" ")
+                    console.log(message)
+                    return convertirHandler(message.interactive.button_reply.title, from, flag)
                 case "inicio":
                     return inicioHandler(from)
                 default:
@@ -146,11 +154,11 @@ function textHandler(message, from) {
         if (cantidad) {
             console.log(converterFactor)
             if (listaDivisas != null) {
-                [texto, converterFactor] = [`${divisa.getTexto("textoConvertido")} *_$ ${(+cantidad[0].replace(",", ".") * converterFactor).toFixed(2)}_*\n\n${divisa.getTexto("textoMasConversiones")}`, null]
+                [texto, converterFactor] = [`${divisa.getTexto("textoConvertido")} *_$ ${converterFactor == 0 ? 0 : (+cantidad[0].replace(",", ".") * converterFactor).toFixed(2)}_*\n\n${divisa.getTexto("textoMasConversiones")}`, null]
                 return botRequest.buildList(from, {
                     body: texto,
                     boton: divisa.getTexto("listaTipoCambio")
-                }, [{ titulo: "Opciones", botones: listaDivisas }])
+                }, [{ titulo: "Opciones", botones: listaDivisas.lista }])
             }
             //return botRequest.buildText(from,`${divisa.getTexto("textoConvertido")} _$ ${(+cantidad[0].replace(",", ".") * converterFactor).toFixed(2)}_\n\n${divisa.getTexto("textoMasConversiones")}` )
         }
@@ -158,7 +166,7 @@ function textHandler(message, from) {
     return inicioHandler(from)
 }
 
-function inicioHandler(from){
+function inicioHandler(from) {
     return botRequest.buildButtons(from, divisa.getTexto("textoBienvenida"), [
         { id: "solicita", text: divisa.getTexto("botonSolicita") },
         { id: "ubicaciones", text: divisa.getTexto("botonUbicaciones") },
@@ -243,38 +251,32 @@ function localizarHandler(from, lat, long) {
     })
 }
 
-async function divisasHandler(from, lat, long, offset = 0) {
-    return await divisa.getDivisas(lat, long).then((data) => {
-        let buttons = data.divisaCapturaDTOList.slice(offset, offset+4).reduce((acc, curr) => {
-            return curr.divisa == "Pesos" ? acc : {lista: [
-                ...acc.lista,
+async function divisaListHandler(from, lat, long, offset = 0){
+    return await divisa.getDivisas(lat, long).then((data)=>{
+        let lista = data.divisaCapturaDTOList.filter(curr => curr.divisa != "Pesos")
+        let buttons = lista.slice(offset, offset + 9).reduce((acc, curr)=>{
+            return {texto: `${acc.texto} ${divisa.getBandera(curr.divisa)}`, lista: [
+                 ...acc.lista,
                 {
-                    id: `convertir ${curr.venta == 0 ? 0 : 1 / curr.venta} ${curr.divisa}`,
-                    titulo: `${divisa.getBandera(curr.divisa)} Venta a $ ${curr.venta}`,
-                    description: `Convertir Pesos a ${curr.divisa}`
-                }, {
-                    id: `convertir ${curr.compra} ${curr.divisa}`,
-                    titulo: `${divisa.getBandera(curr.divisa)} Comprar a $ ${curr.compra}`,
-                    description: `Convertir ${curr.divisa} a Pesos`
+                    id: `divisaAcciones ${curr.divisa} ${curr.venta} ${curr.compra}`,
+                    titulo: `${divisa.getBandera(curr.divisa)} ${curr.divisa}`,
+                    description: `Tipo de cambio en ${curr.divisa}`
                 }
-            ], texto: `${acc.texto} ${divisa.getBandera(curr.divisa)}`}
-        }, {
-            lista: [], 
-            texto:  divisa.getTexto("textoDivisasListadas")
-        })
+            ]}
+        }, { lista: [],texto: divisa.getTexto("textoDivisasListadas") })
         console.log(buttons)
-        let offsetList = data.divisaCapturaDTOList.slice(offset+4, offset+8)
-        if(offsetList.length > 0){
+        let offsetList = lista.slice(offset + 9, offset + 18)
+        if (offsetList.length > 0) {
             buttons.lista.push({
-                id: `divisas ${lat} ${long} ${offset+4}`,
+                id: `divisas ${lat} ${long} ${offset + 9}`,
                 titulo: divisa.getTexto("botonPaginacion"),
-                description: offsetList.reduce((acc, curr)=>{return curr.divisa == "Pesos" ? acc : `${acc} ${divisa.getBandera(curr.divisa)}`}, divisa.getTexto("textoDivisasListadas") )
+                description: offsetList.reduce((acc, curr) => { return `${acc} ${divisa.getBandera(curr.divisa)}` }, divisa.getTexto("textoDivisasListadas"))
             })
         }
         listaDivisas = buttons
         console.log(data.zona)
         return botRequest.buildList(from, {
-           header: data.zona,
+            header: data.zona,
             body: divisa.getTexto("textoTipoCambio"),
             footer: buttons.texto,
             boton: divisa.getTexto("listaTipoCambio")
@@ -282,8 +284,54 @@ async function divisasHandler(from, lat, long, offset = 0) {
     })
 }
 
-function convertirHandler(message, from, flag) {
-    return botRequest.buildText(from, divisa.getTexto("textoConvertirDivisa") + (message.interactive.list_reply.title.includes("Comprar") ? `${divisa.getBandera(flag)} a ${divisa.getBandera("Pesos")}` : `${divisa.getBandera("Pesos")} a ${divisa.getBandera(flag)}`))
+function divisaHandler(from, moneda, venta, compra){
+    return botRequest.buildButtons(from, `El tipo de cambio de ${divisa.getBandera(moneda)} ${moneda}
+    Compra: $${compra}    Venta: $${venta}`, [{id: `convertir ${venta == 0 ? 0 : 1 / venta} ${moneda}`, text: "Venta"},{id: `convertir ${compra} ${moneda}`, text: "Compra"}])
+}
+
+async function divisasHandler(from, lat, long, offset = 0) {
+    return await divisa.getDivisas(lat, long).then((data) => {
+        let buttons = data.divisaCapturaDTOList.slice(offset, offset + 4).reduce((acc, curr) => {
+            return curr.divisa == "Pesos" ? acc : {
+                lista: [
+                    ...acc.lista,
+                    {
+                        id: `convertir ${curr.venta == 0 ? 0 : 1 / curr.venta} ${curr.divisa}`,
+                        titulo: `${divisa.getBandera(curr.divisa)} Venta a $ ${curr.venta}`,
+                        description: `Convertir Pesos a ${curr.divisa}`
+                    }, {
+                        id: `convertir ${curr.compra} ${curr.divisa}`,
+                        titulo: `${divisa.getBandera(curr.divisa)} Comprar a $ ${curr.compra}`,
+                        description: `Convertir ${curr.divisa} a Pesos`
+                    }
+                ], texto: `${acc.texto} ${divisa.getBandera(curr.divisa)}`
+            }
+        }, {
+            lista: [],
+            texto: divisa.getTexto("textoDivisasListadas")
+        })
+        console.log(buttons)
+        let offsetList = data.divisaCapturaDTOList.slice(offset + 4, offset + 8)
+        if (offsetList.length > 0) {
+            buttons.lista.push({
+                id: `divisas ${lat} ${long} ${offset + 4}`,
+                titulo: divisa.getTexto("botonPaginacion"),
+                description: offsetList.reduce((acc, curr) => { return curr.divisa == "Pesos" ? acc : `${acc} ${divisa.getBandera(curr.divisa)}` }, divisa.getTexto("textoDivisasListadas"))
+            })
+        }
+        listaDivisas = buttons
+        console.log(data.zona)
+        return botRequest.buildList(from, {
+            header: data.zona,
+            body: divisa.getTexto("textoTipoCambio"),
+            footer: buttons.texto,
+            boton: divisa.getTexto("listaTipoCambio")
+        }, [{ titulo: "Opciones", botones: buttons.lista }])
+    })
+}
+
+function convertirHandler(title, from, flag) {
+    return botRequest.buildText(from, divisa.getTexto("textoConvertirDivisa") + (title.includes("Comprar") ? `${divisa.getBandera(flag)} a ${divisa.getBandera("Pesos")}` : `${divisa.getBandera("Pesos")} a ${divisa.getBandera(flag)}`))
 }
 
 async function sucursalHandler(from, lat, long) {
@@ -293,10 +341,10 @@ async function sucursalHandler(from, lat, long) {
         }, `${data.zona}\n\n${parseHtml(data.descripcion)}`), [
             {
                 id: `localizar ${data.latitudUbicacion} ${data.longitudUbicacion} ${data.zona.replaceAll(" ", "_")}`,
-                text:  divisa.getTexto("textoLocalizar")
+                text: divisa.getTexto("textoLocalizar")
             }, {
                 id: `divisas ${data.latitudUbicacion} ${data.longitudUbicacion}`,
-                text:  divisa.getTexto("textoDivisas")
+                text: divisa.getTexto("textoDivisas")
             }
         ]);
     });

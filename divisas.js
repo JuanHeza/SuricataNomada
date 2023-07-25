@@ -3,10 +3,10 @@ module.exports = {
     handler: class Divisa {
         constructor() {
             this.url = process.env.rootURL,
-            this.ubicaciones = `${this.url}divisasServicios/sucursal/listaSucursales`,
-            this.tipoCambio = `${this.url}divisasServicios/tipoCambio/compraVentaV2`,
-            this.info = `${this.url}divisasServicios/consulta/infoBoot`
-            this._faqs_old = [{
+                this.ubicaciones = `${this.url}divisasServicios/sucursal/listaSucursales`,
+                this.tipoCambio = `${this.url}divisasServicios/tipoCambio/compraVentaV2`,
+                this.info = `${this.url}divisasServicios/consulta/infoBoot`
+            this._faqs = [{
                 pregunta: "¿Aceptan morralla?", // aqui va punto 3
                 respuesta: "Si es _morralla americana_ se aceptan en todas las sucursales de Nuevo León, Quintana Roo y Baja California Sur.\nSe solicita una identificación oficial vigente.\nLa morralla (ya sea americana, euro o canadiense) se compra en un peso menos del tipo de cambio del billete (Compra billete: 16.30, compra morralla: 15.30)"
             }, {
@@ -40,16 +40,16 @@ module.exports = {
                 pregunta: "Cantidad máxima para compras y venta de dólares.", // punto 4
                 respuesta: "En la compra de dólares, se le pueden comprar, por persona, hasta 4,000 dólares por persona al mes, presentando su identificación oficial vigente. Esto puede realizarse en una sola operación o en varias durante el mes.\nEn cuanto a las ventas, se pueden vender hasta 4,900 USD en ventanilla, o su equivalente en otras divisas. Si necesita una cantidad mayor, le sugerimos transferir la llamada a un promotor, quien le proporcionará los requisitos necesarios. Si prefiere, puede dejarnos su nombre y número de teléfono para que el promotor se comunique con usted lo antes posible y le informe los requisitos.\nEn las ventas con el promotor, el trámite puede tardar aproximadamente de 24 a 48 horas."
             }]
-            this._textos_old = {
+            this._textos = {
                 // TEXTOS NO EN BASE DE DATOS
                 textoInicio: "Volver al inicio",
                 textoDivisasListadas: "Divisas listadas",
                 textoLocalizar: "Localizar Sucursal",
                 textoDivisas: "Cambiar Divisas",
-                
+
                 //TEXTOS GUARDADOS
                 Error: "Hubo un problema. El mensaje no puede ser procesado. Intente más tarde.",
-                
+
                 textoFaltante: "Texto Faltante",
                 textoConvertido: "La cantidad convertida equivale a\n",
                 textoMasConversiones: " _Si desea hacer más conversiones, seleccione de la lista._",
@@ -75,8 +75,6 @@ module.exports = {
                 botonFaq: "Preguntas Frequentes",
                 botonPaginacion: `Siguiente página`
             }
-            this._faqs = this._faqs_old
-            this._textos = this._textos_old
             this.getInfo()
         }
 
@@ -112,7 +110,8 @@ module.exports = {
                 },
                 data: {
                     "latitudUbicacion": latitudUbicacion,
-                    "longitudUbicacion": longitudUbicacion
+                    "longitudUbicacion": longitudUbicacion,
+                    "pantalla": "boot"
                 }
             }
             return await axios.request(params).then((response) => {
@@ -125,7 +124,7 @@ module.exports = {
                 return null
             })
         }
-        
+
         async getInfo() {
             let params = {
                 method: 'POST',
@@ -136,14 +135,14 @@ module.exports = {
                 },
             }
             return await axios.request(params).then((response) => {
-                if(response.data.errorDTO.codigo == 0){
+                if (response.data.errorDTO.codigo == 0) {
                     this._faqs = response.data.FAQS
                     // COMENTADO PARA USAR TEXTOS LOCALES, NO LOS DE LA BASE, CONSULTAR SI ES APROPIADO
                     //this._textos = response.data.TEXTOS
                 }
             })
         }
-        
+
         getBandera(buscar) {
             let banderas = {
                 USD: "🇺🇸",
@@ -161,13 +160,13 @@ module.exports = {
             }
             return banderas[buscar] || ""
         }
-        
+
         getFaqs(faq = -1) {
             return faq == -1 ? this._faqs : this._faqs[faq]
         }
-        
+
         getTexto(texto) {
-            return this._textos[texto] || this._textos.Error            
+            return this._textos[texto] || this._textos.Error
         }
     }
 }
