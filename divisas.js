@@ -118,6 +118,7 @@ module.exports = {
                 response.data.divisaCapturaDTOList.forEach(div => {
                     div.moneda = this.getBandera([div.divisa])
                 })
+                console.log(response.data)
                 return response.data
             }).catch((error) => {
                 console.log("ERROR: ", error)

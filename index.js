@@ -130,7 +130,6 @@ async function interactiveHandler(message, from) {
                     //return divisasHandler(from, lat, long)
                 case "convertir":
                     [ignore, converterFactor, flag] = message.interactive.button_reply.id.split(" ")
-                    console.log(message)
                     return convertirHandler(message.interactive.button_reply.title, from, flag)
                 case "inicio":
                     return inicioHandler(from)
@@ -285,8 +284,7 @@ async function divisaListHandler(from, lat, long, offset = 0){
 }
 
 function divisaHandler(from, moneda, venta, compra){
-    return botRequest.buildButtons(from, `El tipo de cambio de ${divisa.getBandera(moneda)} ${moneda}
-    Compra: $${compra}    Venta: $${venta}`, [{id: `convertir ${venta == 0 ? 0 : 1 / venta} ${moneda}`, text: "Venta"},{id: `convertir ${compra} ${moneda}`, text: "Compra"}])
+    return botRequest.buildButtons(from, `El tipo de cambio de ${divisa.getBandera(moneda)} ${moneda}\nVenta: $${venta}    Compra: $${compra}`, [{id: `convertir ${venta == 0 ? 0 : 1 / venta} ${moneda}`, text: "Venta"},{id: `convertir ${compra} ${moneda}`, text: "Compra"}])
 }
 
 async function divisasHandler(from, lat, long, offset = 0) {
@@ -331,7 +329,7 @@ async function divisasHandler(from, lat, long, offset = 0) {
 }
 
 function convertirHandler(title, from, flag) {
-    return botRequest.buildText(from, divisa.getTexto("textoConvertirDivisa") + (title.includes("Comprar") ? `${divisa.getBandera(flag)} a ${divisa.getBandera("Pesos")}` : `${divisa.getBandera("Pesos")} a ${divisa.getBandera(flag)}`))
+    return botRequest.buildText(from, divisa.getTexto("textoConvertirDivisa") + ((title.includes("Comprar") || title.includes("Compra")) ? `${divisa.getBandera(flag)} a ${divisa.getBandera("Pesos")}` : `${divisa.getBandera("Pesos")} a ${divisa.getBandera(flag)}`))
 }
 
 async function sucursalHandler(from, lat, long) {
