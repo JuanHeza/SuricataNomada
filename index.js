@@ -35,7 +35,8 @@ app.post("/webhook", (req, res) => {
                         return textHandler(message, from)
                     case "location":
                         console.log("UBICACION")
-                        return await locationHandler(message, from)
+                        //return await locationHandler(message, from)
+                        return await locationSingleHandler(message, from)
                     default:
                         console.log(message.type)
                         console.log(root)
@@ -44,7 +45,7 @@ app.post("/webhook", (req, res) => {
             }
             //if (from == "528666303285"){/////////////////
             params(root.messages[0], from).then((data) => {
-                console.log(new Date())
+                console.log(`======| ${root.messages[0].from} | === | ${new Date().toLocaleString('en-US', { timeZone: 'America/mexico_city' })} |======`)
                 axios.request(data).then(function(response) {
                     console.log("++++++++++++++++++++++++++++++++++++++++++++++++++++++++\n")
                     axios.request(botRequest.setRead(root.messages[0].id)).catch(function(unreaded) {
@@ -95,21 +96,23 @@ async function interactiveHandler(message, from) {
                     [ignore, lat, long] = message.interactive.list_reply.id.split(" ")
                     return sucursalHandler(from, lat, long)
                 case "sucursalesPagina":
-                    let index = message.interactive.list_reply.id.split(" ")[1]
-                    return listHandler(message, from, index)
+                    [ignore, index, zonaId] = message.interactive.list_reply.id.split(" ")
+                    return listHandler(message, from, index, zonaId)
                 case "convertir":
                     [ignore, converterFactor, flag] = message.interactive.list_reply.id.split(" ")
                     return convertirHandler(message.interactive.list_reply.title, from, flag)
                 case "faq":
                     [ignore, faq] = message.interactive.list_reply.id.split(" ")
-                    //return botRequest.buildText(from, divisa.getFaqs(faq).respuesta)
                     return faqsHandler(from, divisa.getFaqs(faq).respuesta)
                 case "divisas":
                     [ignore, lat, long, offset] = message.interactive.list_reply.id.split(" ")
                     return divisaListHandler(from, lat, long, Number(offset))
-                case "divisaAcciones": 
+                case "divisaAcciones":
                     [ignore, moneda, venta, compra] = message.interactive.list_reply.id.split(" ")
                     return divisaHandler(from, moneda, venta, compra)
+                case "zonaId":
+                    [ignore, zonaId] = message.interactive.list_reply.id.split(" ")
+                    return listHandler(message, from, 0, zonaId)
                 default:
                     return unknownHandler(from)
             }
@@ -127,12 +130,16 @@ async function interactiveHandler(message, from) {
                 case "divisas":
                     [ignore, lat, long] = message.interactive.button_reply.id.split(" ")
                     return divisaListHandler(from, lat, long)
-                    //return divisasHandler(from, lat, long)
+                //return divisasHandler(from, lat, long)
                 case "convertir":
                     [ignore, converterFactor, flag] = message.interactive.button_reply.id.split(" ")
                     return convertirHandler(message.interactive.button_reply.title, from, flag)
+                case "tipoCambio":
+                    return tipoCambioHandler(from)
                 case "inicio":
                     return inicioHandler(from)
+                case "zonas":
+                    return zonasHandler(from)
                 default:
                     return unknownHandler(from)
             }
@@ -151,7 +158,7 @@ function textHandler(message, from) {
     if (converterFactor) {
         let cantidad = msg_body.match(/[0-9]+([,.][0-9]+)?/)
         if (cantidad) {
-            console.log(converterFactor)
+            //console.log(converterFactor)
             if (listaDivisas != null) {
                 [texto, converterFactor] = [`${divisa.getTexto("textoConvertido")} *_$ ${converterFactor == 0 ? 0 : (+cantidad[0].replace(",", ".") * converterFactor).toFixed(2)}_*\n\n${divisa.getTexto("textoMasConversiones")}`, null]
                 return botRequest.buildList(from, {
@@ -167,8 +174,11 @@ function textHandler(message, from) {
 
 function inicioHandler(from) {
     return botRequest.buildButtons(from, divisa.getTexto("textoBienvenida"), [
-        { id: "solicita", text: divisa.getTexto("botonSolicita") },
-        { id: "ubicaciones", text: divisa.getTexto("botonUbicaciones") },
+        //{ id: "solicita", text: divisa.getTexto("botonSolicita") },
+
+        { id: "tipoCambio", text: "Tipo de Cambio" },
+        { id: "zonas", text: divisa.getTexto("botonUbicaciones") },
+        //{ id: "ubicaciones", text: divisa.getTexto("botonUbicaciones") },
         { id: "faq", text: divisa.getTexto("botonFaq") }
     ])
 }
@@ -180,7 +190,7 @@ function unknownHandler(from) {
 }
 
 async function locationHandler(message, from) {
-    console.log(message.location)
+    //console.log(message.location)
     return await divisa.getUbicaciones(message.location.latitude, message.location.longitude).then(function(data) {
         return botRequest.buildList(from, { body: divisa.getTexto("textoUbicacionesCercanas"), boton: divisa.getTexto("listaUbicacionesCercanas") }, [{
             titulo: "Sucursales",
@@ -198,8 +208,16 @@ async function locationHandler(message, from) {
     })
 }
 
-async function listHandler(message, from, index = 0) {
-    return await divisa.getUbicaciones().then(function(data) {
+async function locationSingleHandler(message, from) {
+    //console.log(message.location)
+    return await divisa.getUbicaciones(message.location.latitude, message.location.longitude).then(function(data) {
+        let ubicacion = data.shift()
+        return sucursalHandler(from, ubicacion.latitud, ubicacion.longitud)
+    })
+}
+
+async function listHandler(message, from, index = 0, zonaId = 0) {
+    return await divisa.getUbicaciones(0, 0, zonaId).then(function(data) {
         let dataList = data.slice(index * 9, ((index * 1) + 1) * 9)
         list = dataList.reduce((acc, curr) => {
             item = {
@@ -214,13 +232,12 @@ async function listHandler(message, from, index = 0) {
         let len = data.slice(index * 9, (index + 1) * 9).length
         if (len != 0) {
             list.botones.push({
-                id: `sucursalesPagina ${index}`,
+                id: `sucursalesPagina ${index} ${zonaId}`,
                 titulo: divisa.getTexto("botonPaginacion"),
                 description: `${(index * 9) + 1} - ${(len + (index * 9))}`
             })
         }
-        console.log(list)
-        return botRequest.buildList(from, { body: list.botones.slice(0, 9).reduce((acc, curr) => { return `${acc}\n\n*${curr.titulo}*` }, divisa.getTexto("textoListaSucursales")), boton: divisa.getTexto("listaSucursales") }, [list])
+        return botRequest.buildList(from, { header: `Sucursales ${zonaId != 0 ? divisa.getZona(zonaId) : ""}`, body: list.botones.slice(0, 9).reduce((acc, curr) => { return `${acc}\n\n*${curr.titulo}*` }, divisa.getTexto("textoListaSucursales")), boton: divisa.getTexto("listaSucursales") }, [list])
     })
 }
 
@@ -250,20 +267,22 @@ function localizarHandler(from, lat, long) {
     })
 }
 
-async function divisaListHandler(from, lat, long, offset = 0){
-    return await divisa.getDivisas(lat, long).then((data)=>{
+async function divisaListHandler(from, lat, long, offset = 0) {
+    return await divisa.getDivisas(lat, long).then((data) => {
         let lista = data.divisaCapturaDTOList.filter(curr => curr.divisa != "Pesos")
-        let buttons = lista.slice(offset, offset + 9).reduce((acc, curr)=>{
-            return {texto: `${acc.texto} ${divisa.getBandera(curr.divisa)}`, lista: [
-                 ...acc.lista,
-                {
-                    id: `divisaAcciones ${curr.divisa} ${curr.venta} ${curr.compra}`,
-                    titulo: `${divisa.getBandera(curr.divisa)} ${curr.divisa}`,
-                    description: `Tipo de cambio en ${curr.divisa}`
-                }
-            ]}
-        }, { lista: [],texto: divisa.getTexto("textoDivisasListadas") })
-        console.log(buttons)
+        let buttons = lista.slice(offset, offset + 9).reduce((acc, curr) => {
+            return {
+                texto: `${acc.texto} ${divisa.getBandera(curr.divisa)}`, lista: [
+                    ...acc.lista,
+                    {
+                        id: `divisaAcciones ${curr.divisa} ${curr.venta} ${curr.compra}`,
+                        titulo: `${divisa.getBandera(curr.divisa)} ${curr.divisa}`,
+                        //                    description: `Tipo de cambio en ${curr.divisa}`
+                        description: `Venta: $${curr.venta}    Compra: $${curr.compra}`
+                    }
+                ]
+            }
+        }, { lista: [], texto: divisa.getTexto("textoDivisasListadas") })
         let offsetList = lista.slice(offset + 9, offset + 18)
         if (offsetList.length > 0) {
             buttons.lista.push({
@@ -273,7 +292,6 @@ async function divisaListHandler(from, lat, long, offset = 0){
             })
         }
         listaDivisas = buttons
-        console.log(data.zona)
         return botRequest.buildList(from, {
             header: data.zona,
             body: divisa.getTexto("textoTipoCambio"),
@@ -283,8 +301,13 @@ async function divisaListHandler(from, lat, long, offset = 0){
     })
 }
 
-function divisaHandler(from, moneda, venta, compra){
-    return botRequest.buildButtons(from, `El tipo de cambio de ${divisa.getBandera(moneda)} ${moneda}\nVenta: $${venta}    Compra: $${compra}`, [{id: `convertir ${venta == 0 ? 0 : 1 / venta} ${moneda}`, text: "Venta"},{id: `convertir ${compra} ${moneda}`, text: "Compra"}])
+function divisaHandler(from, moneda, venta, compra) {
+    return botRequest.buildButtons(from, `El tipo de cambio de ${divisa.getBandera(moneda)} ${moneda}\nVenta: $${venta}    Compra: $${compra}`,
+        [
+            { id: `convertir ${venta == 0 ? 0 : 1 / venta} ${moneda}`, text: "Venta" },
+            { id: `convertir ${compra} ${moneda}`, text: "Compra" }
+        ]
+    )
 }
 
 async function divisasHandler(from, lat, long, offset = 0) {
@@ -308,7 +331,6 @@ async function divisasHandler(from, lat, long, offset = 0) {
             lista: [],
             texto: divisa.getTexto("textoDivisasListadas")
         })
-        console.log(buttons)
         let offsetList = data.divisaCapturaDTOList.slice(offset + 4, offset + 8)
         if (offsetList.length > 0) {
             buttons.lista.push({
@@ -318,7 +340,6 @@ async function divisasHandler(from, lat, long, offset = 0) {
             })
         }
         listaDivisas = buttons
-        console.log(data.zona)
         return botRequest.buildList(from, {
             header: data.zona,
             body: divisa.getTexto("textoTipoCambio"),
@@ -335,7 +356,7 @@ function convertirHandler(title, from, flag) {
 async function sucursalHandler(from, lat, long) {
     return await divisa.getDivisas(lat, long).then((data) => {
         return botRequest.buildButtons(from, data.divisaCapturaDTOList.reduce((acc, curr) => {
-            return curr.divisa == "Pesos" ? acc : `${acc}\n\n${curr.moneda} ${curr.divisa}\n*COPMRA:*  _$ ${curr.compra}_\n*VENTA:*  _$ ${curr.venta}_`
+            return curr.divisa == "Pesos" ? acc : `${acc}\n\n${curr.moneda} ${curr.divisa}\n*COMPRA:*  _$ ${curr.compra}_    *VENTA:*  _$ ${curr.venta}_`
         }, `${data.zona}\n\n${parseHtml(data.descripcion)}`), [
             {
                 id: `localizar ${data.latitudUbicacion} ${data.longitudUbicacion} ${data.zona.replaceAll(" ", "_")}`,
@@ -346,6 +367,27 @@ async function sucursalHandler(from, lat, long) {
             }
         ]);
     });
+}
+
+async function tipoCambioHandler(from) {
+    return await sucursalHandler(from, divisa.cuahutemoc.latitud, divisa.cuahutemoc.longitud).then((data) => {
+        data.data.interactive.action.buttons.shift()
+        let texto = data.data.interactive.body.text
+        let bandera = divisa.getBandera("USD")
+        data.data.interactive.header = { type: "text", text: divisa.getTexto("textoCambioActualHeader") }
+        data.data.interactive.footer = { text: divisa.getTexto("textoCambioActualFooter") }
+        data.data.interactive.body.text = bandera + texto.split(bandera).pop()
+
+        return data
+    })
+}
+
+function zonasHandler(from) {
+    let botones = divisa.zonas.reduce((acc, curr) => {
+        return [...acc, { id: `zonaId ${curr.zonaId}`, titulo: curr.titulo }]
+    }, [])
+    //console.log(botones)
+    return botRequest.buildList(from, { body: divisa.getTexto("textoZonas"), boton: "Zonas" }, [{ titulo: "Opciones", botones: botones }])
 }
 
 /*-------------------------------*/
@@ -372,5 +414,10 @@ https://wit.ai/docs/tutorials
 
 https://drive.google.com/file/d/1G41WfgpMsSYotJhRCKe0ljrMaUlbxsNc/edit?pli=1
 
+https://place-puppy.com/
 
+let doc = document.getElementById('puppy-box').contentWindow.document
+doc.open()
+doc.write("<script> document.addEventListener('DOMContentLoaded', function(event) { document.querySelector('body').style.background = 'red'; })</script>")
+doc.close()
 */
