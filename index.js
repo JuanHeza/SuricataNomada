@@ -382,12 +382,14 @@ async function tipoCambioHandler(from) {
     })
 }
 
-function zonasHandler(from) {
-    let botones = divisa.zonas.reduce((acc, curr) => {
-        return [...acc, { id: `zonaId ${curr.zonaId}`, titulo: curr.titulo }]
-    }, [])
-    //console.log(botones)
-    return botRequest.buildList(from, { body: divisa.getTexto("textoZonas"), boton: "Zonas" }, [{ titulo: "Opciones", botones: botones }])
+async function zonasHandler(from) {
+    return await divisa.getCategorias().then(data=>{
+        let botones = data.reduce((acc, curr) => {
+            return [...acc, { id: `zonaId ${curr.zonaId}`, titulo: curr.titulo }]
+        }, [])
+        //console.log(botones)
+        return botRequest.buildList(from, { body: divisa.getTexto("textoZonas"), boton: "Zonas" }, [{ titulo: "Opciones", botones: botones }])
+    })
 }
 
 /*-------------------------------*/

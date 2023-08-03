@@ -5,7 +5,8 @@ module.exports = {
             this.url = process.env.rootURL,
                 this.ubicaciones = `${this.url}divisasServicios/sucursal/listaSucursales`,
                 this.tipoCambio = `${this.url}divisasServicios/tipoCambio/compraVentaV2`,
-                this.info = `${this.url}divisasServicios/consulta/infoBoot`
+                this.info = `${this.url}divisasServicios/consulta/infoBoot`,
+                this.categorias = `${this.url}divisasServicios/sucursal/categoriaChatBot`
             this.cuahutemoc = { latitud: '25.667324', longitud: '-100.2814916' }
             this.zonas = [
                 { zonaId: 0, titulo: "Todas" },
@@ -99,6 +100,7 @@ module.exports = {
 
             // COMENTADO PARA USAR TEXTOS LOCALES, NO LOS DE LA BASE, CONSULTAR SI ES APROPIADO
             // this.getInfo()
+            this.getCategorias()
         }
 
         async getUbicaciones(latitudUbicacion = 0, longitudUbicacion = 0, zonaId = 0) {
@@ -110,9 +112,9 @@ module.exports = {
                     "Content-Type": "application/json",
                 },
                 data: {
-                    "zonaId": zonaId,
-                    "latitudUbicacion": latitudUbicacion,
-                    "longitudUbicacion": longitudUbicacion
+                    "categoriaChatBotId": `${zonaId}`,
+                    "latitudUbicacion": `${latitudUbicacion}`,
+                    "longitudUbicacion": `${longitudUbicacion}`
                 }
             }
             return await axios.request(params).then((response) => {
@@ -167,6 +169,30 @@ module.exports = {
             })
         }
 
+        async getCategorias() {
+            let params = {
+                method: 'POST',
+                url: this.categorias,
+                headers: {
+                    Authorization: "Basic MDow",
+                    "Content-Type": "application/json",
+                },
+            }
+            return await axios.request(params).then((response) => {
+                if (response.data.errorDTO.codigo == 0) {
+                    /* return  */ response.data.listaCategoria.forEach(obj => {
+                    Object.assign(obj, { zonaId: obj['categoriaChatBotId'] });
+                    delete obj['categoriaChatBotId'];
+                    Object.assign(obj, { titulo: obj['nombre'] });
+                    delete obj['nombre'];
+                })
+                    this.zonas = response.data.listaCategoria
+                    return response.data.listaCategoria
+
+                }
+            })
+        }
+
         getBandera(buscar) {
             let banderas = {
                 USD: "🇺🇸",
@@ -193,7 +219,7 @@ module.exports = {
             return this._textos[texto] || this._textos.Error
         }
         getZona(zonaId = 0) {
-            return this.zonas.find(z => z.zonaId == zonaId).titulo
+            return this.zonas.find(z => z.zonaId == zonaId).titulo || ""
         }
     }
 }
