@@ -5,4 +5,22 @@
 // https://kanare-abstract.com/en
 🇪🇸
 
-# notas 12/07/2023
+
+/*
+https://www.storyblocks.com/images/stock/material-design-ui-ux-and-gui-kit-for-online-food-order-mobile-apps-with-login-menu-select-food-pizza-food-pizza-type-detail-confirmation-delivery-details-payment-option-and-order-placed-screens-sy9c9a866xj1gusvdd
+
+https://www.dreamstime.com/stock-illustration-material-design-ui-ux-gui-screens-health-medical-mobile-apps-doctor-details-booking-select-date-time-edit-profile-image84273695
+
+https://developers.facebook.com/docs/messenger-platform/overview
+
+https://wit.ai/docs/tutorials
+
+https://drive.google.com/file/d/1G41WfgpMsSYotJhRCKe0ljrMaUlbxsNc/edit?pli=1
+
+https://place-puppy.com/
+
+let doc = document.getElementById('puppy-box').contentWindow.document
+doc.open()
+doc.write("<script> document.addEventListener('DOMContentLoaded', function(event) { document.querySelector('body').style.background = 'red'; })</script>")
+doc.close()
+*/

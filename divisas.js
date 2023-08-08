@@ -15,7 +15,6 @@ module.exports = {
                 { zonaId: 3, titulo: "Los cabos" },
                 { zonaId: 4, titulo: "Guerrero" },
                 { zonaId: 5, titulo: "Mérida" },
-                //{ zonaId: 6, titulo: "Chihuahua" },
                 { zonaId: 7, titulo: "Sinaloa" },
                 { zonaId: 8, titulo: "Zacatecas" }
             ]
@@ -59,13 +58,6 @@ module.exports = {
                 //respuesta: "En la compra de dólares, se le pueden comprar, por persona, hasta 4,000 dólares por persona al mes, presentando su identificación oficial vigente. Esto puede realizarse en una sola operación o en varias durante el mes.\nEn cuanto a las ventas, se pueden vender hasta 4,900 USD en ventanilla, o su equivalente en otras divisas. Si necesita una cantidad mayor, le sugerimos transferir la llamada a un promotor, quien le proporcionará los requisitos necesarios. Si prefiere, puede dejarnos su nombre y número de teléfono para que el promotor se comunique con usted lo antes posible y le informe los requisitos.\nEn las ventas con el promotor, el trámite puede tardar aproximadamente de 24 a 48 horas."
             }]
             this._textos = {
-                // TEXTOS NO EN BASE DE DATOS
-                textoInicio: "Volver al inicio",
-                textoDivisasListadas: "Divisas listadas",
-                textoLocalizar: "Localizar Sucursal",
-                textoDivisas: "Cambiar Divisas",
-
-                //TEXTOS GUARDADOS
                 Error: "Hubo un problema. El mensaje no puede ser procesado. Intente más tarde.",
 
                 textoFaltante: "Texto Faltante",
@@ -74,7 +66,7 @@ module.exports = {
                 textoConvertirDivisa: "Ingrese la cantidad que desea convertir.\n",
                 textoEnviarLocalizacion: "Por favor, comparta su ubicación actual.",
                 textoFaqs: "A continuación, te presentamos una lista con nuestras preguntas frecuentes.",
-                textoBienvenida: "¡Hola soy Dolarin el asistente de Divisas San Jorge!Estoy aqui para ayudarte, por favor selecciona alguna de las opciones:",
+                textoBienvenida: "¡Hola soy Dolarin el asistente de Divisas San Jorge! Estoy aqui para ayudarte, por favor selecciona alguna de las opciones:",
                 //textoBienvenida: "¡Hola! Bienvenido a San Jorge Casa de Cambio.\n\n¡Mi nombre es Dolarín y estoy aqui para apoyarte!\n\nPara Tipos de Cambio, Sucursales y Preguntas Frecuentes puedes seleccionar la opcion que corresponda.",
                 textoTipoCambio: "Seleccione su tipo de cambio.",
                 textoUbicacionesCercanas: "Ubicaciones Cercanas.",
@@ -82,6 +74,10 @@ module.exports = {
                 textoCambioActualHeader: `Tipos de cambio actuales`,
                 textoCambioActualFooter: `Tomando como referencia la sucursal Cuahutemoc`,
                 textoZonas: "Seleccione una de las siguientes zonas",
+                textoInicio: "Volver al inicio",
+                textoDivisasListadas: "Divisas listadas",
+                textoLocalizar: "Localizar Sucursal",
+                textoDivisas: "Cambiar Divisas",
 
                 listaTipoCambios: "Lista de conversión de monedas",
                 listaSucursales: "Lista de sucursales",
@@ -95,7 +91,8 @@ module.exports = {
                 botonSolicita: "Ubicaciones cercanas",
                 botonUbicaciones: "Ubicaciones",
                 botonFaq: "Preguntas Frequentes",
-                botonPaginacion: `Siguiente página`
+                botonPaginacion: `Siguiente página`,
+                botonTipoCambio: "Tipo de Cambio"
             }
 
             // COMENTADO PARA USAR TEXTOS LOCALES, NO LOS DE LA BASE, CONSULTAR SI ES APROPIADO
@@ -143,7 +140,6 @@ module.exports = {
                 response.data.divisaCapturaDTOList.forEach(div => {
                     div.moneda = this.getBandera([div.divisa])
                 })
-                //console.log(response.data)
                 return response.data
             }).catch((error) => {
                 console.log("ERROR: ", error)
@@ -180,7 +176,7 @@ module.exports = {
             }
             return await axios.request(params).then((response) => {
                 if (response.data.errorDTO.codigo == 0) {
-                    /* return  */ response.data.listaCategoria.forEach(obj => {
+                    response.data.listaCategoria.forEach(obj => {
                     Object.assign(obj, { zonaId: obj['categoriaChatBotId'] });
                     delete obj['categoriaChatBotId'];
                     Object.assign(obj, { titulo: obj['nombre'] });
