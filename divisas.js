@@ -20,7 +20,7 @@ module.exports = {
             ]
             this._faqs = [{
                 pregunta: "¿Aceptan morralla?", // aqui va punto 3
-                respuesta: "Se acepta morralla americana, euros y canadiense en todas nuestas sucursales excepto Aeopuerto Chihuahua, Mazatlan y Zacatecas.\nSe solicitara identificacion oficial y vigente (INE, pasaporte, matricula consular y/o passport card) la moneda se compra un peso por debajo a su tipo de cambio establecido ejemplo _tipo de cambio 16.30 tipo de cambio morralla 15.30_"
+                respuesta: "Se acepta morralla americana, euros y canadiense en todas nuestas sucursales excepto Aeropuerto Chihuahua, Mazatlan y Zacatecas.\nSe solicitara identificacion oficial y vigente (INE, pasaporte, matricula consular y/o passport card) la moneda se compra un peso por debajo a su tipo de cambio establecido ejemplo _tipo de cambio 16.30 tipo de cambio morralla 15.30_"
                 //respuesta: "Si es _morralla americana_ se aceptan en todas las sucursales de Nuevo León, Quintana Roo y Baja California Sur.\nSe solicita una identificación oficial vigente.\nLa morralla (ya sea americana, euro o canadiense) se compra en un peso menos del tipo de cambio del billete (Compra billete: 16.30, compra morralla: 15.30)"
             }, {
                 pregunta: "¿Compramos billetes y monedas antiguas?", // punto 8
@@ -54,7 +54,7 @@ module.exports = {
                 //respuesta: "Las identificaciones permitidas son: credencial de elector vigente con dirección completa, pasaporte vigente y matrícula consular vigente.\nSi su identificación no cuenta con dirección completa, se requiere un comprobante de domicilio a su nombre con una antigüedad no mayor a 2 meses.\nEn caso de no contar con un comprobante de domicilio a su nombre, deberá presentar 2 comprobantes de domicilio de diferentes servicios con una antigüedad no mayor a 2 meses, y que coincidan con la misma dirección."
             }, {
                 pregunta: "Cantidad máxima para compras y venta de dólares.", // punto 4
-                respuesta: "Se pueden comprar hasta 4,000 usd o su equivalente en divisas  al mes por persona presentando su identificacion oficial vigente, dicha cantidad la puede cambiar en una sola operacion odurante varias dentro del mes.\nEn cuanto a la venta, se le pueden vender hasta  4.900  usd en ventanilla o su equivalente en divisas, si desea una cantidad mayor puede proporcionar sus datos enviando un whatsapp al numero 8136655500 y un promotor se pondra en contacto con usted."
+                respuesta: "Se pueden comprar hasta 4,000 usd o su equivalente en divisas  al mes por persona presentando su identificacion oficial vigente, dicha cantidad la puede cambiar en una sola operacion o durante varias dentro del mes.\nEn cuanto a la venta, se le pueden vender hasta  4.900  usd en ventanilla o su equivalente en divisas, si desea una cantidad mayor puede proporcionar sus datos enviando un whatsapp al numero 8136655500 y un promotor se pondra en contacto con usted."
                 //respuesta: "En la compra de dólares, se le pueden comprar, por persona, hasta 4,000 dólares por persona al mes, presentando su identificación oficial vigente. Esto puede realizarse en una sola operación o en varias durante el mes.\nEn cuanto a las ventas, se pueden vender hasta 4,900 USD en ventanilla, o su equivalente en otras divisas. Si necesita una cantidad mayor, le sugerimos transferir la llamada a un promotor, quien le proporcionará los requisitos necesarios. Si prefiere, puede dejarnos su nombre y número de teléfono para que el promotor se comunique con usted lo antes posible y le informe los requisitos.\nEn las ventas con el promotor, el trámite puede tardar aproximadamente de 24 a 48 horas."
             }]
             this._textos = {
@@ -177,11 +177,11 @@ module.exports = {
             return await axios.request(params).then((response) => {
                 if (response.data.errorDTO.codigo == 0) {
                     response.data.listaCategoria.forEach(obj => {
-                    Object.assign(obj, { zonaId: obj['categoriaChatBotId'] });
-                    delete obj['categoriaChatBotId'];
-                    Object.assign(obj, { titulo: obj['nombre'] });
-                    delete obj['nombre'];
-                })
+                        Object.assign(obj, { zonaId: obj['categoriaChatBotId'] });
+                        delete obj['categoriaChatBotId'];
+                        Object.assign(obj, { titulo: obj['nombre'] });
+                        delete obj['nombre'];
+                    })
                     this.zonas = response.data.listaCategoria
                     return response.data.listaCategoria
 
